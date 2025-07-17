@@ -209,7 +209,10 @@ outdated:
 # Docker
 docker-build:
 	@echo "Building Docker image..."
-	docker build -t fastapi-backend .
+	docker build \
+	-f docker/Dockerfile.dev \
+	-t fastapi-backend \
+	.
 
 docker-run:
 	@echo "Running Docker container..."

@@ -4,6 +4,7 @@ SQLite User service for business logic operations.
 
 from typing import Optional
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 from ..models.user import User
 from ..repository.user_repository import UserRepository
 from .base_service import BaseService
@@ -16,10 +17,11 @@ class SQLiteUserService(BaseService[User, UserRepository]):
 
     def __init__(self):
         super().__init__(UserRepository())
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def create_user(self, db: Session, user_data: dict) -> User:
         """
-        Create a new user with validation.
+        Create a new user with validation and password hashing.
 
         Args:
             db: Database session
@@ -31,6 +33,11 @@ class SQLiteUserService(BaseService[User, UserRepository]):
         Raises:
             ValueError: If validation fails
         """
+        # Hash password before storing
+        if "password" in user_data:
+            user_data = user_data.copy()  # Don't modify original dict
+            user_data["password"] = self.pwd_context.hash(user_data["password"])
+        
         return self.create_item(db, user_data)
 
     def get_user_by_username(self, db: Session, username: str) -> Optional[User]:

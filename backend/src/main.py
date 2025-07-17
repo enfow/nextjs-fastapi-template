@@ -123,6 +123,10 @@ def create_app() -> FastAPI:
     from .controller.sqlite_user_controller import router as sqlite_user_router
     from .controller.mongo_user_controller import router as mongo_user_router
     from .controller.image_controller import router as image_router
+    from .controller.auth_controller import router as auth_router
+
+    # Authentication
+    app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 
     # SQLite users
     app.include_router(sqlite_user_router, prefix="/api/sqlite-users", tags=["SQLite Users"])

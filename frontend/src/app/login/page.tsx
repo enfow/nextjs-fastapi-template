@@ -129,7 +129,7 @@ function LoginForm() {
           {/* Demo Credentials */}
           <div className="mt-6 p-3 bg-secondary/50 rounded-md">
             <p className="text-xs text-foreground/60 text-center">
-              Demo credentials: <br />
+              Demo credentials (requires backend running): <br />
               <strong>Username:</strong> admin <br />
               <strong>Password:</strong> password1
             </p>

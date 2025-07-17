@@ -1,10 +1,133 @@
 version: '3.8'
 
+networks:
+  app-network:
+    driver: bridge
+
 services:
+  # MongoDB Service
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb-compose
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: fastapi_db
+    volumes:
+      - mongodb_data:/data/db
+      - ./backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MinIO Service
+  minio:
+    image: minio/minio:latest
+    container_name: minio-compose
+    restart: always
+    ports:
+      - "9000:9000"      # MinIO API
+      - "9001:9001"      # MinIO Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio_data:/data
+    networks:
+      - app-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+
+  # Backend Services
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    environment:
+      - DATABASE_URL=sqlite:///./app.db
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/fastapi_db?authSource=admin
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=false
+      - MINIO_BUCKET_NAME=fastapi-images
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=info
+      - CORS_ORIGINS=http://localhost:3000,http://frontend-dev:3000
+    container_name: fastapi-dev-compose
+    networks:
+      - app-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  backend-prod:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./app.db
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/fastapi_db?authSource=admin
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=false
+      - MINIO_BUCKET_NAME=fastapi-images
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=info
+      - CORS_ORIGINS=http://localhost:3001,http://frontend-prod:3000
+    container_name: fastapi-prod-compose
+    networks:
+      - app-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    profiles:
+      - production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Services
   frontend-dev:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: docker/Dockerfile.dev
     ports:
       - "3000:3000"
     volumes:
@@ -17,12 +140,18 @@ services:
       - NODE_ENV=development
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     container_name: nextjs-dev-compose
+    networks:
+      - app-network
+    # depends_on:
+    #   backend-dev:
+    #     condition: service_healthy
 
   frontend-prod:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     ports:
       - "3001:3000"
     environment:
@@ -30,6 +159,16 @@ services:
       - NEXTAUTH_URL=http://localhost:3001
       - NEXTAUTH_SECRET=your-super-secure-production-secret-replace-this-with-real-secret
       - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
     container_name: nextjs-prod-compose
+    networks:
+      - app-network
+    # depends_on:
+    #   backend-prod:
+    #     condition: service_healthy
     profiles:
-      - production 
+      - production
+
+volumes:
+  mongodb_data:
+  minio_data: 

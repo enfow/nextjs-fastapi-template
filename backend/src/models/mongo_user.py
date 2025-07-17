@@ -23,7 +23,7 @@ class MongoUser(Document):
         use_state_management = True
         
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "username": "johndoe",
                 "password": "securepassword123",
