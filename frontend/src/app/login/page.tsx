@@ -149,9 +149,7 @@ function LoginPageFallback() {
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Welcome Back
             </h1>
-            <p className="text-foreground/60">
-              Loading...
-            </p>
+            <p className="text-foreground/60">Loading...</p>
           </div>
         </div>
       </div>

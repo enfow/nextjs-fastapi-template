@@ -2,25 +2,38 @@
 
 import { useRef, useState } from 'react';
 
+import { type UploadedImage, useApiStore } from '@/stores/apiStore';
+
 import { ImageViewModal } from './ImageViewModal';
 
 interface SingleImageUploaderProps {
   image: string | null;
   onImageUpload: (image: string | null) => void;
   onImageRemove: () => void;
+  directoryName?: string;
+  description?: string;
+  onMinioUpload?: (uploadedImage: UploadedImage) => void;
 }
 
 export function SingleImageUploader({
   image,
   onImageUpload,
   onImageRemove,
+  directoryName = 'single-uploads',
+  description,
+  onMinioUpload,
 }: SingleImageUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadSingleImage, uploadStatus, resetUploadStatus } = useApiStore();
 
   const handleFileSelect = (file: File) => {
     if (file && file.type.startsWith('image/')) {
+      setCurrentFile(file);
+      resetUploadStatus();
       const reader = new FileReader();
       reader.onload = (e) => {
         onImageUpload(e.target?.result as string);
@@ -61,8 +74,23 @@ export function SingleImageUploader({
 
   const handleRemove = () => {
     onImageRemove();
+    setCurrentFile(null);
+    resetUploadStatus();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleUploadToMinio = async () => {
+    if (!currentFile) return;
+
+    const result = await uploadSingleImage(
+      currentFile,
+      directoryName,
+      description
+    );
+    if (result && onMinioUpload) {
+      onMinioUpload(result);
     }
   };
 
@@ -145,14 +173,50 @@ export function SingleImageUploader({
       </div>
 
       {image && (
-        <div className="mt-4 text-center">
-          <button
-            onClick={handleRemove}
-            className="text-foreground/60 hover:text-foreground p-2 flex items-center justify-center hover:bg-foreground/10 transition-colors mx-auto"
-            title="Remove image"
-          >
-            Remove
-          </button>
+        <div className="mt-4 space-y-3">
+          {/* Upload to MinIO Button */}
+          {currentFile && !uploadStatus.success && (
+            <div className="text-center">
+              <button
+                onClick={handleUploadToMinio}
+                disabled={uploadStatus.isUploading}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+              >
+                {uploadStatus.isUploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  'Upload to MinIO'
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Upload Status */}
+          {uploadStatus.error && (
+            <div className="text-center text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded">
+              Error: {uploadStatus.error}
+            </div>
+          )}
+
+          {uploadStatus.success && (
+            <div className="text-center text-green-600 text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded">
+              ✅ Successfully uploaded to MinIO!
+            </div>
+          )}
+
+          {/* Remove Button */}
+          <div className="text-center">
+            <button
+              onClick={handleRemove}
+              className="text-foreground/60 hover:text-foreground p-2 flex items-center justify-center hover:bg-foreground/10 transition-colors mx-auto"
+              title="Remove image"
+            >
+              Remove
+            </button>
+          </div>
         </div>
       )}
 

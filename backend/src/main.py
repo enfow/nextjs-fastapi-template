@@ -12,9 +12,14 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import os
 
-from .database import create_tables
-from .mongodb import mongodb_manager
-from .minio_client import minio_manager
+from src.database import create_tables
+from src.mongodb import mongodb_manager
+from src.minio_client import minio_manager
+from src.controller.sqlite_user_controller import router as sqlite_user_router
+from src.controller.mongo_user_controller import router as mongo_user_router
+from src.controller.image_controller import router as image_router
+from src.controller.auth_controller import router as auth_router
+from src.logging_config import setup_logging, get_app_logger
 
 
 def create_app() -> FastAPI:
@@ -119,12 +124,6 @@ def create_app() -> FastAPI:
             ]
         }
 
-    # Register controllers/routers
-    from .controller.sqlite_user_controller import router as sqlite_user_router
-    from .controller.mongo_user_controller import router as mongo_user_router
-    from .controller.image_controller import router as image_router
-    from .controller.auth_controller import router as auth_router
-
     # Authentication
     app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 
@@ -143,50 +142,54 @@ def create_app() -> FastAPI:
 # Create the app instance
 app = create_app()
 
+# Initialize logging system
+environment = os.getenv("NODE_ENV", "development")
+setup_logging(environment)
+logger = get_app_logger()
 
 # Service initialization events
 @app.on_event("startup")
 async def startup_event():
     """Initialize all services on application startup."""
-    print("🚀 Starting FastAPI application...")
+    logger.info("🚀 Starting FastAPI application...")
     
     # Initialize SQLite
     try:
         create_tables()
-        print("✅ SQLite database initialized successfully!")
+        logger.info("✅ SQLite database initialized successfully!")
     except Exception as e:
-        print(f"❌ Failed to initialize SQLite: {e}")
+        logger.error(f"❌ Failed to initialize SQLite: {e}")
     
     # Initialize MongoDB
     try:
         await mongodb_manager.connect()
-        print("✅ MongoDB database initialized successfully!")
+        logger.info("✅ MongoDB database initialized successfully!")
     except Exception as e:
-        print(f"❌ Failed to initialize MongoDB: {e}")
-        print("⚠️  Application will continue without MongoDB")
+        logger.error(f"❌ Failed to initialize MongoDB: {e}")
+        logger.warning("⚠️  Application will continue without MongoDB")
     
     # Initialize MinIO
     try:
         minio_manager.connect()
-        print("✅ MinIO object storage initialized successfully!")
+        logger.info("✅ MinIO object storage initialized successfully!")
     except Exception as e:
-        print(f"❌ Failed to initialize MinIO: {e}")
-        print("⚠️  Application will continue without MinIO")
+        logger.error(f"❌ Failed to initialize MinIO: {e}")
+        logger.warning("⚠️  Application will continue without MinIO")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up services on application shutdown."""
-    print("🛑 Shutting down FastAPI application...")
+    logger.info("🛑 Shutting down FastAPI application...")
     
     try:
         await mongodb_manager.disconnect()
-        print("✅ MongoDB disconnected successfully!")
+        logger.info("✅ MongoDB disconnected successfully!")
     except Exception as e:
-        print(f"❌ Error disconnecting from MongoDB: {e}")
+        logger.error(f"❌ Error disconnecting from MongoDB: {e}")
     
     # MinIO doesn't require explicit disconnection
-    print("✅ All services shut down successfully!")
+    logger.info("✅ All services shut down successfully!")
 
 
 if __name__ == "__main__":

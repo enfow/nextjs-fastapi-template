@@ -15,12 +15,16 @@ from ..schemas.image import (
     DirectoryListResponse,
     ImageInfoResponse
 )
+from ..logging_config import get_image_logger
 
 # Create router
 router = APIRouter()
 
 # Create service instance
 image_service = ImageService()
+
+# Create logger
+logger = get_image_logger()
 
 
 @router.post("/upload", response_model=ImageUploadResponse, status_code=201)
@@ -43,6 +47,8 @@ async def upload_image(
     Raises:
         HTTPException: If upload fails or validation errors occur
     """
+    logger.info(f"Starting image upload: {file.filename} to directory '{directory_name}'")
+    
     try:
         result = await image_service.upload_image(
             file=file,
@@ -50,13 +56,17 @@ async def upload_image(
             description=description
         )
         
+        logger.info(f"Successfully uploaded image: {result.get('file_name', 'unknown')}")
         return ImageUploadResponse(**result)
 
     except ValueError as e:
+        logger.warning(f"Image upload validation error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
+        logger.error(f"Image upload runtime error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        logger.error(f"Unexpected error during image upload: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -234,24 +244,31 @@ async def bulk_upload_images(
     Raises:
         HTTPException: If any upload fails
     """
+    logger.info(f"Starting bulk upload: {len(files)} files to directory '{directory_name}'")
+    
     try:
         results = []
         errors = []
 
-        for file in files:
+        for i, file in enumerate(files):
             try:
+                logger.debug(f"Processing file {i+1}/{len(files)}: {file.filename}")
                 result = await image_service.upload_image(
                     file=file,
                     directory_name=directory_name,
                     description=description
                 )
                 results.append(result)
+                logger.debug(f"File {i+1} uploaded successfully: {result.get('file_name', 'unknown')}")
             except Exception as e:
+                logger.warning(f"File {i+1} ({file.filename}) failed to upload: {str(e)}")
                 errors.append({
                     "filename": file.filename,
                     "error": str(e)
                 })
 
+        logger.info(f"Bulk upload complete: {len(results)} success, {len(errors)} errors")
+        
         return {
             "success": len(errors) == 0,
             "message": f"Uploaded {len(results)} images successfully" + (f", {len(errors)} failed" if errors else ""),
@@ -262,6 +279,7 @@ async def bulk_upload_images(
         }
 
     except Exception as e:
+        logger.error(f"Unexpected error during bulk upload: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

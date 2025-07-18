@@ -2,29 +2,27 @@
 Authentication controller for handling HTTP requests related to user authentication.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, status, Depends, Header
+from typing import Optional
 
-from ..database import get_db
-from ..service.auth_service import AuthService
-from ..schemas.auth import LoginRequest, LoginResponse
+from src.service.mongo_auth_service import MongoAuthService
+from src.schemas.auth import LoginRequest, LoginResponse
 
 
 # Create router
 router = APIRouter()
 
 # Create service instance
-auth_service = AuthService()
+auth_service = MongoAuthService()
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+async def login(login_data: LoginRequest):
     """
     Authenticate user and return access token.
 
     Args:
         login_data: Login credentials (username and password)
-        db: Database session
 
     Returns:
         Access token and user information
@@ -33,8 +31,7 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         HTTPException: If credentials are invalid
     """
     try:
-        result = auth_service.login(
-            db=db,
+        result = await auth_service.login(
             username=login_data.username,
             password=login_data.password
         )
@@ -58,17 +55,41 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/verify")
-async def verify_token(db: Session = Depends(get_db)):
+async def verify_token(authorization: Optional[str] = Header(None)):
     """
     Verify current user token (for token validation).
     This endpoint can be used by the frontend to verify if a token is still valid.
 
     Args:
-        db: Database session
+        authorization: Authorization header with Bearer token
 
     Returns:
         User information if token is valid
+
+    Raises:
+        HTTPException: If token is invalid or missing
     """
-    # This would typically require authentication middleware
-    # For now, returning a simple verification endpoint
-    return {"message": "Token verification endpoint", "status": "available"} 
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header"
+        )
+    
+    token = authorization.split(" ")[1]
+    user = await auth_service.get_current_user(token)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    
+    return {
+        "user": {
+            "id": str(user.id),
+            "username": user.username,
+            "name": user.username,
+            "email": f"{user.username}@example.com"
+        },
+        "valid": True
+    } 

@@ -13,42 +13,33 @@ dependencies = [
     # FastAPI Core
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
-    
     # Database
     "sqlalchemy>=2.0.0",
     "alembic>=1.12.0",
-    
     # Database drivers
-    "psycopg2-binary>=2.9.0",  # PostgreSQL
-    
+    "psycopg2-binary>=2.9.0", # PostgreSQL
     # MongoDB
-    "motor>=3.3.0",  # Async MongoDB driver
-    "pymongo>=4.6.0",  # MongoDB driver
-    "beanie>=1.23.0",  # MongoDB ODM for Python
-    
+    "motor>=3.3.0", # Async MongoDB driver
+    "pymongo>=4.6.0", # MongoDB driver
+    "beanie>=1.23.0", # MongoDB ODM for Python
     # Object Storage (MinIO)
-    "minio>=7.2.0",  # MinIO client
-    "aiofiles>=23.2.0",  # Async file operations
-    
+    "minio>=7.2.0", # MinIO client
+    "aiofiles>=23.2.0", # Async file operations
     # File handling
-    "python-multipart>=0.0.6",  # File upload support
-    "pillow>=10.1.0",  # Image processing
-    
+    "python-multipart>=0.0.6", # File upload support
+    "pillow>=10.1.0", # Image processing
     # Pydantic for data validation
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
     "email-validator>=2.1.0",
-    
     # Authentication & Security
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    
+    "bcrypt>=4.0.1,<4.1.0",  # Pin bcrypt to avoid compatibility issues with passlib
     # HTTP client
     "httpx>=0.25.0",
-    
     # Environment variables
     "python-dotenv>=1.0.0",
-    
     # Logging
     "structlog>=23.2.0",
 ]

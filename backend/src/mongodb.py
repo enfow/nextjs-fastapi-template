@@ -10,6 +10,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from .models.mongo_user import MongoUser
+from .logging_config import get_database_logger
 
 
 class MongoDBManager:
@@ -20,6 +21,7 @@ class MongoDBManager:
     def __init__(self):
         self.client: Optional[AsyncIOMotorClient] = None
         self.database = None
+        self.logger = get_database_logger()
         
     async def connect(self):
         """
@@ -36,17 +38,17 @@ class MongoDBManager:
             
             # Test connection
             await self.client.admin.command('ping')
-            print("✅ Connected to MongoDB successfully!")
+            self.logger.info("✅ Connected to MongoDB successfully!")
             
             # Initialize Beanie with document models
             await init_beanie(
                 database=self.database,
                 document_models=[MongoUser]
             )
-            print("✅ Beanie ODM initialized successfully!")
+            self.logger.info("✅ Beanie ODM initialized successfully!")
             
         except Exception as e:
-            print(f"❌ Failed to connect to MongoDB: {e}")
+            self.logger.error(f"❌ Failed to connect to MongoDB: {e}")
             raise
     
     async def disconnect(self):
@@ -55,7 +57,7 @@ class MongoDBManager:
         """
         if self.client:
             self.client.close()
-            print("✅ Disconnected from MongoDB")
+            self.logger.info("✅ Disconnected from MongoDB")
     
     async def ping(self):
         """

@@ -3,6 +3,7 @@ MongoDB User service for business logic operations.
 """
 
 from typing import Optional, List
+from passlib.context import CryptContext
 from ..models.mongo_user import MongoUser
 from ..repository.mongo_repository import MongoRepository
 
@@ -14,10 +15,11 @@ class MongoUserService:
 
     def __init__(self):
         self.repository = MongoRepository(MongoUser)
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     async def create_user(self, user_data: dict) -> MongoUser:
         """
-        Create a new user with validation.
+        Create a new user with validation and password hashing.
 
         Args:
             user_data: User data dictionary
@@ -33,6 +35,11 @@ class MongoUserService:
         # Check if username already exists
         if await self.repository.exists("username", user_data["username"]):
             raise ValueError("Username already exists")
+        
+        # Hash password before storing
+        if "password" in user_data:
+            user_data = user_data.copy()  # Don't modify original dict
+            user_data["password"] = self.pwd_context.hash(user_data["password"])
         
         return await self.repository.create(user_data)
 

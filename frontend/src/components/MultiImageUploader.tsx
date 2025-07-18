@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { type UploadedImage, useApiStore } from '@/stores/apiStore';
+
 import { ImageViewModal } from './ImageViewModal';
 
 interface MultiImageUploaderProps {
@@ -10,6 +12,9 @@ interface MultiImageUploaderProps {
   onImageRemove: (index: number) => void;
   onClearAll: () => void;
   maxImages?: number;
+  directoryName?: string;
+  description?: string;
+  onMinioUpload?: (uploadedImages: UploadedImage[]) => void;
 }
 
 export function MultiImageUploader({
@@ -18,25 +23,37 @@ export function MultiImageUploader({
   onImageRemove,
   onClearAll,
   maxImages = 10,
+  directoryName = 'multi-uploads',
+  description,
+  onMinioUpload,
 }: MultiImageUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentFiles, setCurrentFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadMultipleImages, uploadStatus, resetUploadStatus } =
+    useApiStore();
 
   const handleFilesSelect = (files: FileList) => {
     const remainingSlots = maxImages - images.length;
     const filesToProcess = Array.from(files).slice(0, remainingSlots);
+    const imageFiles = filesToProcess.filter((file) =>
+      file.type.startsWith('image/')
+    );
 
-    const imagePromises = filesToProcess
-      .filter((file) => file.type.startsWith('image/'))
-      .map((file) => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(file);
-        });
+    // Add files to current files array
+    setCurrentFiles((prev) => [...prev, ...imageFiles]);
+    resetUploadStatus();
+
+    const imagePromises = imageFiles.map((file) => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
       });
+    });
 
     Promise.all(imagePromises).then(onImagesAdd);
   };
@@ -86,6 +103,32 @@ export function MultiImageUploader({
 
   const handleNextImage = () => {
     setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleUploadToMinio = async () => {
+    if (currentFiles.length === 0) return;
+
+    const result = await uploadMultipleImages(
+      currentFiles,
+      directoryName,
+      description
+    );
+    if (result.length > 0 && onMinioUpload) {
+      onMinioUpload(result);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    // Remove from preview images
+    onImageRemove(index);
+    // Remove corresponding file from files array
+    setCurrentFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleClearAll = () => {
+    onClearAll();
+    setCurrentFiles([]);
+    resetUploadStatus();
   };
 
   return (
@@ -167,14 +210,46 @@ export function MultiImageUploader({
             <h3 className="text-lg font-semibold text-foreground">
               Uploaded Images ({images.length})
             </h3>
-            <button
-              onClick={onClearAll}
-              className="text-foreground/60 hover:text-foreground p-2 flex items-center justify-center hover:bg-foreground/10 transition-colors"
-              title="Clear all images"
-            >
-              Clear
-            </button>
+            <div className="flex items-center space-x-2">
+              {/* Upload to MinIO Button */}
+              {currentFiles.length > 0 && !uploadStatus.success && (
+                <button
+                  onClick={handleUploadToMinio}
+                  disabled={uploadStatus.isUploading}
+                  className="bg-primary text-primary-foreground px-3 py-1 text-sm rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {uploadStatus.isUploading ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-1" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Upload to MinIO'
+                  )}
+                </button>
+              )}
+              <button
+                onClick={handleClearAll}
+                className="text-foreground/60 hover:text-foreground p-2 flex items-center justify-center hover:bg-foreground/10 transition-colors"
+                title="Clear all images"
+              >
+                Clear
+              </button>
+            </div>
           </div>
+
+          {/* Upload Status */}
+          {uploadStatus.error && (
+            <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded">
+              Error: {uploadStatus.error}
+            </div>
+          )}
+
+          {uploadStatus.success && (
+            <div className="text-green-600 text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded">
+              ✅ Successfully uploaded {currentFiles.length} images to MinIO!
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {images.map((image, index) => (
@@ -195,7 +270,7 @@ export function MultiImageUploader({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onImageRemove(index);
+                      handleRemoveImage(index);
                     }}
                     className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/70 transition-colors opacity-0 group-hover:opacity-100"
                   >

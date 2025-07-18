@@ -9,6 +9,8 @@ from minio.error import S3Error
 import asyncio
 from contextlib import asynccontextmanager
 
+from .logging_config import get_minio_logger
+
 
 class MinIOManager:
     """
@@ -18,6 +20,7 @@ class MinIOManager:
     def __init__(self):
         self.client: Optional[Minio] = None
         self.bucket_name = os.getenv("MINIO_BUCKET_NAME", "fastapi-images")
+        self.logger = get_minio_logger()
         
     def connect(self):
         """
@@ -39,13 +42,13 @@ class MinIOManager:
             
             # Test connection
             self.client.list_buckets()
-            print("✅ Connected to MinIO successfully!")
+            self.logger.info("✅ Connected to MinIO successfully!")
             
             # Create bucket if it doesn't exist
             self._ensure_bucket_exists()
             
         except Exception as e:
-            print(f"❌ Failed to connect to MinIO: {e}")
+            self.logger.error(f"❌ Failed to connect to MinIO: {e}")
             raise
     
     def _ensure_bucket_exists(self):
@@ -55,11 +58,11 @@ class MinIOManager:
         try:
             if not self.client.bucket_exists(self.bucket_name):
                 self.client.make_bucket(self.bucket_name)
-                print(f"✅ Created bucket '{self.bucket_name}' successfully!")
+                self.logger.info(f"✅ Created bucket '{self.bucket_name}' successfully!")
             else:
-                print(f"✅ Bucket '{self.bucket_name}' already exists")
+                self.logger.info(f"✅ Bucket '{self.bucket_name}' already exists")
         except S3Error as e:
-            print(f"❌ Failed to create/check bucket: {e}")
+            self.logger.error(f"❌ Failed to create/check bucket: {e}")
             raise
     
     def get_client(self) -> Minio:

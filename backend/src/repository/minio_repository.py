@@ -196,15 +196,34 @@ class MinIORepository:
         """
         try:
             client = self.get_client()
-            url = client.presigned_url(
-                method=method,
-                bucket_name=self.bucket_name,
-                object_name=object_name,
-                expires=expires
-            )
+            
+            # Use the correct MinIO client method based on HTTP method
+            if method.upper() == "GET":
+                url = client.presigned_get_object(
+                    bucket_name=self.bucket_name,
+                    object_name=object_name,
+                    expires=expires
+                )
+            elif method.upper() == "PUT":
+                url = client.presigned_put_object(
+                    bucket_name=self.bucket_name,
+                    object_name=object_name,
+                    expires=expires
+                )
+            else:
+                # For other methods, use the generic presigned_get_object as fallback
+                url = client.presigned_get_object(
+                    bucket_name=self.bucket_name,
+                    object_name=object_name,
+                    expires=expires
+                )
+            
             return url
         except S3Error as e:
             print(f"Failed to generate presigned URL for {object_name}: {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error generating presigned URL for {object_name}: {e}")
             return None
 
     def copy_object(self, source_object: str, dest_object: str) -> bool:

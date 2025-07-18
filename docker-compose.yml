@@ -19,8 +19,17 @@ services:
     volumes:
       - mongodb_data:/data/db
       - ./backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./backend/scripts/mongod.conf:/etc/mongod.conf:ro
     networks:
       - app-network
+    # Use custom configuration file to reduce logging verbosity
+    command: ["mongod", "--config", "/etc/mongod.conf"]
+    # Configure Docker logging to reduce container log output
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -81,12 +90,12 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
 
   backend-prod:
     build:
@@ -116,12 +125,12 @@ services:
         condition: service_healthy
     profiles:
       - production
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
 
   # Frontend Services
   frontend-dev:
@@ -141,6 +150,8 @@ services:
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_TELEMETRY_DISABLED=1
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      - NEXTAUTH_BACKEND_URL=http://backend-dev:8000
     container_name: nextjs-dev-compose
     networks:
       - app-network
