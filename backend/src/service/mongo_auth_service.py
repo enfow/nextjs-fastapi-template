@@ -8,7 +8,7 @@ from typing import Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
-from ..models.mongo_user import MongoUser
+from src.models.mongo_user import MongoUser
 
 
 class MongoAuthService:

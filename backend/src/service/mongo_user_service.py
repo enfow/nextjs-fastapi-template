@@ -4,8 +4,8 @@ MongoDB User service for business logic operations.
 
 from typing import Optional, List
 from passlib.context import CryptContext
-from ..models.mongo_user import MongoUser
-from ..repository.mongo_repository import MongoRepository
+from src.models.mongo_user import MongoUser
+from src.repository.mongo_repository import MongoRepository
 
 
 class MongoUserService:

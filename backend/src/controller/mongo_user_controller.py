@@ -5,9 +5,9 @@ MongoDB User controller for handling HTTP requests.
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
-from ..service.mongo_user_service import MongoUserService
-from ..schemas.user import UserCreate, UserUpdate
-from ..schemas.mongo_user import MongoUserResponse, MongoUserListResponse
+from src.service.mongo_user_service import MongoUserService
+from src.schemas.user import UserCreate, UserUpdate
+from src.schemas.mongo_user import MongoUserResponse, MongoUserListResponse
 
 # Create router
 router = APIRouter()

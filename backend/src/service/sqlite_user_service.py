@@ -5,9 +5,9 @@ SQLite User service for business logic operations.
 from typing import Optional
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from ..models.user import User
-from ..repository.user_repository import UserRepository
-from .base_service import BaseService
+from src.models.user import User
+from src.repository.user_repository import UserRepository
+from src.service.base_service import BaseService
 
 
 class SQLiteUserService(BaseService[User, UserRepository]):

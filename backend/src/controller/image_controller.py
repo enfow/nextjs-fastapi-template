@@ -7,15 +7,15 @@ from fastapi.responses import StreamingResponse
 from typing import Optional
 import io
 
-from ..service.image_service import ImageService
-from ..schemas.image import (
+from src.service.image_service import ImageService
+from src.schemas.image import (
     ImageUploadResponse, 
     ImageListResponse, 
     ImageDeleteResponse, 
     DirectoryListResponse,
     ImageInfoResponse
 )
-from ..logging_config import get_image_logger
+from src.logging_config import get_image_logger
 
 # Create router
 router = APIRouter()

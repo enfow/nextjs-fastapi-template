@@ -8,7 +8,7 @@ from typing import List, Dict, Optional, BinaryIO
 from datetime import datetime, timedelta
 from minio import Minio
 from minio.error import S3Error
-from ..minio_client import get_minio_client, get_bucket_name
+from src.minio_client import get_minio_client, get_bucket_name
 
 
 class MinIORepository:

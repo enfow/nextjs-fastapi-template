@@ -9,7 +9,7 @@ from minio.error import S3Error
 import asyncio
 from contextlib import asynccontextmanager
 
-from .logging_config import get_minio_logger
+from src.logging_config import get_minio_logger
 
 
 class MinIOManager:

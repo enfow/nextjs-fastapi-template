@@ -9,9 +9,9 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from ..models.user import User
-from ..repository.user_repository import UserRepository
-from ..schemas.auth import UserAuthInfo
+from src.models.user import User
+from src.repository.user_repository import UserRepository
+from src.schemas.auth import UserAuthInfo
 
 
 class AuthService:

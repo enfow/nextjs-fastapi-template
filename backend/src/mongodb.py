@@ -9,8 +9,8 @@ from beanie import init_beanie
 import asyncio
 from contextlib import asynccontextmanager
 
-from .models.mongo_user import MongoUser
-from .logging_config import get_database_logger
+from src.models.mongo_user import MongoUser
+from src.logging_config import get_database_logger
 
 
 class MongoDBManager:

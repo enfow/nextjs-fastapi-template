@@ -10,7 +10,7 @@ from fastapi import UploadFile
 from PIL import Image
 import os
 
-from ..repository.minio_repository import MinIORepository
+from src.repository.minio_repository import MinIORepository
 
 
 class ImageService:

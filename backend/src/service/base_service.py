@@ -4,7 +4,7 @@ Base Service class providing common business logic operations.
 
 from typing import Type, TypeVar, Generic, Optional, List
 from sqlalchemy.orm import Session
-from ..repository.base_repository import BaseRepository, ModelType
+from src.repository.base_repository import BaseRepository, ModelType
 
 # Generic type for repositories
 RepositoryType = TypeVar("RepositoryType", bound=BaseRepository)

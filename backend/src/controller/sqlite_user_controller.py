@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from ..database import get_db
-from ..service.sqlite_user_service import SQLiteUserService
-from ..schemas.user import UserCreate, UserUpdate, UserResponse, UserListResponse
+from src.database import get_db
+from src.service.sqlite_user_service import SQLiteUserService
+from src.schemas.user import UserCreate, UserUpdate, UserResponse, UserListResponse
 
 # Create router
 router = APIRouter()
